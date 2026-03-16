@@ -594,122 +594,138 @@ $checkoutPublicKey = $_SERVER['CHECKOUT_PUBLIC_KEY'] ?? $_ENV['CHECKOUT_PUBLIC_K
     </div>
 
     <script>
-    // 1. Wrap EVERYTHING inside DOMContentLoaded
-    document.addEventListener("DOMContentLoaded", () => {
+        // 1. Wrap EVERYTHING inside DOMContentLoaded
+        document.addEventListener("DOMContentLoaded", () => {
 
-        // Now we know for sure the HTML exists before grabbing it
-        const tabs = document.querySelectorAll('.payment-tab');
-        const contents = document.querySelectorAll('.payment-content');
-        const customCheckoutBtn = document.querySelector('#btn-checkout');
+            // Now we know for sure the HTML exists before grabbing it
+            const tabs = document.querySelectorAll('.payment-tab');
+            const contents = document.querySelectorAll('.payment-content');
+            const customCheckoutBtn = document.querySelector('#btn-checkout');
 
-        // 2. Tab Switching Logic
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                contents.forEach(c => c.classList.remove('active'));
+            // 2. Tab Switching Logic
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    contents.forEach(c => c.classList.remove('active'));
 
-                tab.classList.add('active');
-                const targetId = tab.getAttribute('data-target');
-                document.getElementById(targetId).classList.add('active');
-            });
-        });
-
-        // 3. Checkout.com Initialization
-        async function initCheckout() {
-            try {
-                const response = await fetch('/create-session.php', { method: 'POST' });
-                const sessionData = await response.json();
-
-                const translations = {
-                    en: {
-                        'pay_button.pay_with': 'Pay and Place Order'
-                    },
-                };
-
-                const appearance = {
-                    colorAction: "#000000",
-                    colorBorder: "#e0e0e0",
-                    colorFormBorder: "#e0e0e0",
-                    borderRadius: ["1px", "1px"]
-                }
-
-                const myPublicKey = "<?php echo $checkoutPublicKey; ?>";
-
-                const checkout = await CheckoutWebComponents({
-                    paymentSession: sessionData,
-                    locale: "en",
-                    publicKey: myPublicKey, 
-                    environment: 'sandbox',
-                    translations: translations,
-                    appearance: appearance,
-                    componentOptions: {
-                        card: {
-                            showPayButton: true, 
-                            displayCardholderName: 'top'
-                        }
-                    },
-                    onReady: () => {
-                        console.log('Web Components Ready');
-                    },
-                    onAuthorized: (_self, authorizeResult) => {
-                        console.log("authorizeResult", authorizeResult);
-                    },
-                    onError: (component, error) => {
-                        console.error("onError", error, "Component", component.type);
-                    },
-                    onPaymentCompleted: (_component, paymentResponse) => {
-                        console.log("Create Payment with PaymentId: ", paymentResponse.id);
-                    },
+                    tab.classList.add('active');
+                    const targetId = tab.getAttribute('data-target');
+                    document.getElementById(targetId).classList.add('active');
                 });
+            });
 
-                // Create components
-                const cardComponent = checkout.create('card');
-                const gpayComponent = checkout.create('googlepay');
-                const applepayComponent = checkout.create('applepay');
-                const paypalComponent = checkout.create('paypal');
-                const tabbyComponent = checkout.create('tabby');
+            // 3. Checkout.com Initialization
+            async function initCheckout() {
+                try {
+                    const response = await fetch('/create-session.php', { method: 'POST' });
+                    const sessionData = await response.json();
 
-                // Mount components
-                if (await cardComponent.isAvailable()) {
-                    cardComponent.mount('#card-container');
-                }
-                if (await gpayComponent.isAvailable()) {
-                    gpayComponent.mount('#gpay-container');
-                }
-                if (await applepayComponent.isAvailable()) {
-                    applepayComponent.mount('#applepay-container');
-                }
-                if (await paypalComponent.isAvailable()) {
-                    paypalComponent.mount('#paypal-button-container');
-                }
-                if (await tabbyComponent.isAvailable()) {
-                    tabbyComponent.mount('#tabbyCard');
-                }
+                    const translations = {
+                        en: {
+                            'pay_button.pay_with': 'Pay and Place Order'
+                        },
+                    };
 
-                // 4. Bind the custom button
-                // if (customCheckoutBtn) {
-                //     customCheckoutBtn.addEventListener('click', (e) => {
-                //         e.preventDefault();
+                    const appearance = {
+                        colorAction: "#000000",
+                        colorBorder: "#e0e0e0",
+                        colorFormBorder: "#e0e0e0",
+                        borderRadius: ["1px", "1px"]
+                    }
 
-                //         if (cardComponent.isValid()) {
-                //             console.log("Submitting card payment...");
-                //             cardComponent.submit();
-                //         } else {
-                //             console.error("Card form is invalid or incomplete.");
-                //             // alert("Please complete your card details.");
-                //         }
-                //     });
-                // }
+                    const myPublicKey = "<?php echo $checkoutPublicKey; ?>";
 
-            } catch (error) {
-                console.error("Failed to initialize checkout:", error);
+                    const checkout = await CheckoutWebComponents({
+                        paymentSession: sessionData,
+                        locale: "en",
+                        publicKey: myPublicKey,
+                        environment: 'sandbox',
+                        translations: translations,
+                        appearance: appearance,
+                        componentOptions: {
+                            card: {
+                                showPayButton: true,
+                                displayCardholderName: 'top'
+                            }
+                        },
+                        onReady: () => {
+                            console.log('Web Components Ready');
+                        },
+                        onAuthorized: (_self, authorizeResult) => {
+                            console.log("authorizeResult", authorizeResult);
+                        },
+                        onError: (component, error) => {
+                            console.error("onError", error, "Component", component.type);
+                        },
+                        onPaymentCompleted: (_component, paymentResponse) => {
+                            console.log("Create Payment with PaymentId: ", paymentResponse.id);
+                        },
+                        onTokenized: (_self, tokenizeResult) => {
+                            // if (tokenizeResult.data.card_type === 'CREDIT') {
+                            //     return {
+                            //         continue: false,
+                            //         errorMessage: 'Credit cards are not accepted.',
+                            //     };
+                            // }
+
+                            console.log("Tokenization successful. Token:", tokenizeResult);
+                            return { continue: true };
+                        },
+                        onCardBinChanged: (_self, card_metadata) => {
+                            console.log("card metadata", card_metadata)
+                            return { continue: true };
+                        },
+                    });
+                    // });
+
+                    // Create components
+                    const cardComponent = checkout.create('card');
+                    const gpayComponent = checkout.create('googlepay');
+                    const applepayComponent = checkout.create('applepay');
+                    const paypalComponent = checkout.create('paypal');
+                    const tabbyComponent = checkout.create('tabby');
+
+                    // Mount components
+                    if (await cardComponent.isAvailable()) {
+                        cardComponent.mount('#card-container');
+                    }
+                    if (await gpayComponent.isAvailable()) {
+                        gpayComponent.mount('#gpay-container');
+                    }
+                    if (await applepayComponent.isAvailable()) {
+                        applepayComponent.mount('#applepay-container');
+                    }
+                    if (await paypalComponent.isAvailable()) {
+                        paypalComponent.mount('#paypal-button-container');
+                    }
+                    if (await tabbyComponent.isAvailable()) {
+                        tabbyComponent.mount('#tabbyCard');
+                    }
+
+                    // 4. Bind the custom button
+                    // if (customCheckoutBtn) {
+                    //     customCheckoutBtn.addEventListener('click', (e) => {
+                    //         e.preventDefault();
+
+                    //         if (cardComponent.isValid()) {
+                    //             console.log("Submitting card payment...");
+                    //             cardComponent.submit();
+                    //         } else {
+                    //             console.error("Card form is invalid or incomplete.");
+                    //             // alert("Please complete your card details.");
+                    //         }
+                    //     });
+                    // }
+
+                } catch (error) {
+                    console.error("Failed to initialize checkout:", error);
+                }
             }
-        }
 
-        // 5. Fire off the initialization
-        initCheckout();
-    });
-</script>
+            // 5. Fire off the initialization
+            initCheckout();
+        });
+    </script>
 </body>
 
 </html>

@@ -62,6 +62,7 @@ $payload = [
             "number" => "500000001"
         ]
     ],
+    // "disabled_payment_methods" => ["remember_me"],
     "billing" => [
         "address" => [
             "address_line1" => "123 High St.",
